@@ -1,0 +1,13 @@
+# Generated previews and local dependencies
+*-preview.png
+node_modules/
+test-results/
+playwright-report/
+
+# Local settings and credentials
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Na Ponta — Anotações para reuniões",
+  "version": "1.2.1",
+  "description": "Suas perguntas e respostas à mão durante as reuniões. Uso local e offline.",
+  "permissions": ["storage", "sidePanel", "scripting"],
+  "host_permissions": ["https://*/*", "http://*/*"],
+  "action": { "default_title": "Abrir Na Ponta" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "panel.html" },
+  "options_ui": { "page": "options.html", "open_in_tab": true }
+}
