@@ -1,6 +1,18 @@
 import {read, write, search, validate} from './data.js';
 const $ = id => document.getElementById(id);
 let data, selected = null, limit = 60, queue = Promise.resolve(), ready = false, revision = 0;
+let dragged = null;
+function clearDrop() { $('items').querySelectorAll('.drop-before,.drop-after').forEach(row => row.classList.remove('drop-before','drop-after')); }
+async function moveItem(id, destination) {
+  const from = data.items.findIndex(item => item.id === id);
+  const to = Math.max(0, Math.min(destination, data.items.length - 1));
+  if (from < 0 || from === to) return;
+  const [item] = data.items.splice(from, 1); data.items.splice(to, 0, item);
+  list();
+  $('order-status').textContent = `Movendo para a posição ${to + 1}…`;
+  try { await save(); $('order-status').textContent = `Salvo: “${item.question}” na posição ${to + 1} de ${data.items.length}.`; }
+  catch { $('order-status').textContent = 'Não foi possível salvar a ordem. Exporte um backup e tente novamente.'; }
+}
 function save() {
   const snapshot = structuredClone(data);
   const current = ++revision;
@@ -14,14 +26,47 @@ function list() {
   $('count').textContent = data.items.length;
   $('items').replaceChildren(); $('more').hidden = results.length <= limit;
   if (!results.length) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = data.items.length ? 'Nenhuma pergunta encontrada.' : 'Suas perguntas aparecerão aqui.'; $('items').append(p); }
+  const positions = new Map(data.items.map((item, index) => [item.id, index]));
   for (const item of results.slice(0, limit)) {
     const row = document.createElement('div'); row.className = 'library-row' + (selected === item.id ? ' selected' : '');
+    row.dataset.id = item.id;
+    const index = positions.get(item.id);
+    const handle = document.createElement('button'); handle.className = 'drag-handle'; handle.textContent = '⠿'; handle.draggable = true;
+    handle.title = 'Arraste para ordenar. Pelo teclado: setas para mover, Home para o topo e End para o fim.';
+    handle.setAttribute('aria-label', `Ordenar: ${item.question}`);
+    handle.ondragstart = event => { dragged = item.id; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain',item.id); event.dataTransfer.setDragImage(row,20,20); row.classList.add('dragging'); };
+    handle.ondragend = () => { dragged = null; row.classList.remove('dragging'); clearDrop(); };
+    handle.onkeydown = async event => {
+      const targets = {ArrowUp:index-1,ArrowDown:index+1,Home:0,End:data.items.length-1};
+      if (!(event.key in targets)) return;
+      event.preventDefault(); await moveItem(item.id,targets[event.key]);
+      [...$('items').children].find(row => row.dataset.id === item.id)?.querySelector('.drag-handle').focus();
+    };
+    row.append(handle);
     const button = document.createElement('button'); button.className = 'item-select'; button.textContent = item.question; button.onclick = () => select(item.id); button.setAttribute('aria-pressed', String(selected === item.id)); row.append(button);
-    for (const [offset, label] of [[-1, '↑'], [1, '↓']]) {
-      const move = document.createElement('button'); move.className = 'move'; move.textContent = label; move.title = offset < 0 ? 'Mover para cima' : 'Mover para baixo'; move.setAttribute('aria-label', `${move.title}: ${item.question}`);
-      const index = data.items.indexOf(item); move.disabled = index + offset < 0 || index + offset >= data.items.length;
-      move.onclick = () => { [data.items[index], data.items[index + offset]] = [data.items[index + offset], data.items[index]]; save(); list(); }; row.append(move);
+    const actions = document.createElement('div'); actions.className = 'order-actions';
+    for (const [destination, label] of [[0,'Topo'],[data.items.length-1,'Fim']]) {
+      const move = document.createElement('button'); move.className = 'order-jump'; move.textContent = label; move.title = `Mover para o ${label.toLowerCase()} da lista completa`; move.setAttribute('aria-label', `Mover para o ${label.toLowerCase()}: ${item.question}`); move.disabled = index === destination;
+      move.onclick = () => moveItem(item.id,destination); actions.append(move);
     }
+    row.append(actions);
+    row.ondragover = event => {
+      if (!dragged || dragged === item.id) return;
+      event.preventDefault(); event.dataTransfer.dropEffect = 'move'; clearDrop();
+      row.classList.add(event.clientY < row.getBoundingClientRect().top + row.offsetHeight/2 ? 'drop-before' : 'drop-after');
+      const bounds = $('items').getBoundingClientRect();
+      if (event.clientY < bounds.top+35) $('items').scrollTop -= 18;
+      else if (event.clientY > bounds.bottom-35) $('items').scrollTop += 18;
+    };
+    row.ondrop = event => {
+      if (!dragged || dragged === item.id) return;
+      event.preventDefault();
+      const from = data.items.findIndex(item => item.id === dragged);
+      const target = data.items.findIndex(candidate => candidate.id === item.id);
+      const after = event.clientY >= row.getBoundingClientRect().top + row.offsetHeight/2;
+      const destination = target + Number(after) - Number(from < target);
+      const id = dragged; dragged = null; clearDrop(); moveItem(id,destination);
+    };
     $('items').append(row);
   }
 }

@@ -6,3 +6,16 @@ header { display:flex; align-items:center; justify-content:space-between; gap:16
 .display-preference { margin-top:28px; padding:24px; border:1px solid var(--line); border-radius:12px; background:#17221c; }
 .display-preference label { display:inline-block; margin-right:14px; }
 .display-preference p { color:var(--muted); font-size:13px; line-height:1.6; margin-bottom:0; }
+
+/* Fast ordering in the question library. */
+.order-hint,.order-status {font-size:11px;line-height:1.5;color:var(--muted);margin:12px 2px;}
+.order-status:empty {display:none;}
+.drag-handle {flex-shrink:0;background:transparent;color:#a4c3af;font-size:23px;padding:6px 3px;cursor:grab;}
+.drag-handle:active {cursor:grabbing;}
+.order-actions {display:flex;flex-direction:column;gap:3px;}
+.order-jump {font-size:10px;color:#c1d9ca;background:#263b2e;border:1px solid #45634f;border-radius:4px;padding:3px 6px;}
+.order-jump:hover:not(:disabled) {background:#385a43;}
+.library-row {position:relative;}
+.library-row.dragging {opacity:.45;}
+.library-row.drop-before {box-shadow:inset 0 3px 0 #8bd5b2;}
+.library-row.drop-after {box-shadow:inset 0 -3px 0 #8bd5b2;}
